@@ -1,6 +1,6 @@
 import numpy as np
-import signal_utils
-from information_block import InformationBlock
+import pyraisrc.signal_utils as signal_utils
+from pyraisrc.information_block import InformationBlock
 
 
 '''

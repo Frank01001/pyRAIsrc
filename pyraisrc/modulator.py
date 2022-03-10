@@ -1,4 +1,4 @@
-import signal_utils
+import pyraisrc.signal_utils as signal_utils
 import numpy as np
 import scipy.io.wavfile as wav
 

@@ -1,8 +1,7 @@
 from scipy.io.wavfile import read
 from numpy.fft import fft, ifft, fftfreq
 
-import signal_utils
-from signal_utils import *
+from pyraisrc.signal_utils import *
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -13,7 +12,7 @@ Prints basic file information: sample rate and encoding type
 
 def print_file_info(file_path):
     sampling_freq, data = read(file_path)
-    print('Opened file ' + {file_path} + ' with sample rate ' + sampling_freq + ' of ' + data.dtype)
+    print('Opened file ' + file_path + ' with sample rate ' + str(sampling_freq) + ' of ' + str(data.dtype))
 
 
 '''
@@ -28,7 +27,7 @@ def get_sequence_from_file(file_path, perfect_generation=False):
     sampling_period = 1 / sampling_freq
 
     # Number of samples for a single bit (30 ms)
-    bit_samples = int(signal_utils.bit_duration / 1000 * sampling_freq)
+    bit_samples = int(bit_duration / 1000 * sampling_freq)
     search_step_samples = bit_samples / 3
 
     sequence_buffer = ''
