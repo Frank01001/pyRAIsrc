@@ -1,6 +1,5 @@
 from scipy.io.wavfile import read
 from numpy.fft import fft, ifft, fftfreq
-
 from pyraisrc.signal_utils import *
 import numpy as np
 import matplotlib.pyplot as plt
@@ -8,8 +7,6 @@ import matplotlib.pyplot as plt
 '''
 Prints basic file information: sample rate and encoding type
 '''
-
-
 def print_file_info(file_path):
     sampling_freq, data = read(file_path)
     print('Opened file ' + file_path + ' with sample rate ' + str(sampling_freq) + ' of ' + str(data.dtype))
@@ -17,10 +14,8 @@ def print_file_info(file_path):
 
 '''
 Returns string of binary digits from SRC in file.
-If the file was generated with no noise, perferct_generation should be set to True
+If the file was generated with no noise or delay, perferct_generation should be set to True
 '''
-
-
 def get_sequence_from_file(file_path, perfect_generation=False):
     sampling_freq, data = read(file_path)
 
@@ -28,7 +23,7 @@ def get_sequence_from_file(file_path, perfect_generation=False):
 
     # Number of samples for a single bit (30 ms)
     bit_samples = int(bit_duration / 1000 * sampling_freq)
-    search_step_samples = bit_samples / 3
+    search_step_samples = int(10 / 1000 * sampling_freq)
 
     sequence_buffer = ''
 
@@ -36,7 +31,8 @@ def get_sequence_from_file(file_path, perfect_generation=False):
     signal_start_index = -1
 
     if not perfect_generation:
-        # Noise evaluation on the first 10 ms of the sound file
+
+        # Noise evaluation on the first 1 sec of the sound file
         noise_extract = data[0:search_step_samples]
         noise_freq_space = fftfreq(noise_extract.size, sampling_period)
         noise_sig_fft = fft(noise_extract)
@@ -46,16 +42,23 @@ def get_sequence_from_file(file_path, perfect_generation=False):
 
         noise_2k = np.real(noise_sig_fft[index_2k])
         noise_2_5k = np.real(noise_sig_fft[index_2_5k])
-        noise_avg = (noise_2k + noise_2_5k) / 2.0
 
-        noise_threshold = 1.412 * max(noise_2k, noise_2_5k)
+        noise_threshold = 141.2 * max(noise_2k, noise_2_5k)
+
+        bit_window_freq_space = fftfreq(bit_samples, sampling_period)
+        index_2k = get_closest_frequency_index(low_freq, bit_window_freq_space)
+        index_2_5k = get_closest_frequency_index(high_freq, bit_window_freq_space)
 
         # Find start of signal
-        for t in np.arange(0, data.size, search_step_samples):
+        search_steps = np.arange(0, data.size, search_step_samples)[:-1]
+        for t in search_steps:
             spectrum = fft(data[t:t + search_step_samples])[:int(sampling_freq / 2)]
 
-            if max(spectrum[index_2k], spectrum[index_2_5k]) > noise_threshold > noise_avg:
+            if max(spectrum[index_2k], spectrum[index_2_5k]) > noise_threshold:
                 signal_start_index = t
+                break
+
+        print('Signal starts at {} seconds'.format(signal_start_index / sampling_freq))
 
         if signal_start_index < 0:
             raise Exception('Could not find start of signal!')
@@ -67,8 +70,8 @@ def get_sequence_from_file(file_path, perfect_generation=False):
     freq_signal = fftfreq(signal.size, sampling_period)
     sig_fft = fft(signal)
 
-    filter_2k = freq_filter(low_freq, freq_signal)
-    filter_2_5k = freq_filter(high_freq, freq_signal)
+    filter_2k = freq_filter(low_freq, freq_signal, interval=50)
+    filter_2_5k = freq_filter(high_freq, freq_signal, interval=50)
 
     data_2k = np.real(ifft(filter_2k * sig_fft))
     data_2_5k = np.real(ifft(filter_2_5k * sig_fft))
@@ -112,8 +115,6 @@ def get_sequence_from_file(file_path, perfect_generation=False):
 '''
 Plots the waveform, filtered 0 bits and 1 bits, noise spectrum (when applicable), filtered sync beeps
 '''
-
-
 def plot_from_file(file_path):
     sampling_freq, data = read(file_path)
 
@@ -152,6 +153,7 @@ def plot_from_file(file_path):
     axs[2, 0].plot(time_domain_x_axis, data_1k)
     axs[2, 0].set_title('Filtered sync beeps')
     axs[2, 1].plot(pos_noise_freq_space, noise_sig_real_dft)
+    axs[2, 1].set_xlim(0,4000)
     axs[2, 1].set_title('Noise spectrum (ignore if perfect generation)')
     fig.tight_layout(pad=5.0)
     plt.show()

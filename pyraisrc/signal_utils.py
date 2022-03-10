@@ -27,7 +27,7 @@ def freq_filter(frequency, freq_obj, interval = 100):
 Returns the index of the closest frequency of the discrete time spectrum
 '''
 def get_closest_frequency_index(freq, freq_obj):
-    for i in range(freq_obj - 1):
+    for i in range(freq_obj.size - 1):
         if freq_obj[i] <= freq < freq_obj[i + 1]:
             return i
 
