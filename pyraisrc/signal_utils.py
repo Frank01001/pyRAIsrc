@@ -11,6 +11,9 @@ total_signal_duration = 8.1e+3 # ms
 sync_duration = 0.1e+3 # ms
 
 
+'''
+Returns a band-pass filter around the frequency with a band of twice the interval
+'''
 def freq_filter(frequency, freq_obj, interval = 100):
     buffer = np.zeros(freq_obj.size)
     mask_1 = freq_obj >= frequency - interval
@@ -20,6 +23,9 @@ def freq_filter(frequency, freq_obj, interval = 100):
     return buffer
 
 
+'''
+Returns the index of the closest frequency of the discrete time spectrum
+'''
 def get_closest_frequency_index(freq, freq_obj):
     for i in range(freq_obj - 1):
         if freq_obj[i] <= freq < freq_obj[i + 1]:
@@ -29,6 +35,9 @@ def get_closest_frequency_index(freq, freq_obj):
     return -1
 
 
+'''
+Used to compute the value of coded integers within the SRC signal
+'''
 def coded_integer(value, bit_values):
     N = bit_values.size
     code = np.zeros(N, dtype=bool)

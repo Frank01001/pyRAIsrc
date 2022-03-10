@@ -1,8 +1,14 @@
 from scipy.io.wavfile import read
 from numpy.fft import fft, ifft, fftfreq
+
+import signal_utils
 from signal_utils import *
 import numpy as np
 import matplotlib.pyplot as plt
+
+'''
+Prints basic file information: sample rate and encoding type
+'''
 
 
 def print_file_info(file_path):
@@ -10,20 +16,28 @@ def print_file_info(file_path):
     print('Opened file ' + {file_path} + ' with sample rate ' + sampling_freq + ' of ' + data.dtype)
 
 
-def get_sequence_from_file(file_path, perfect_generation = False):
+'''
+Returns string of binary digits from SRC in file.
+If the file was generated with no noise, perferct_generation should be set to True
+'''
+
+
+def get_sequence_from_file(file_path, perfect_generation=False):
     sampling_freq, data = read(file_path)
 
     sampling_period = 1 / sampling_freq
 
-    step_samples = int(30 / 1000 * sampling_freq)
-    search_step_samples = step_samples / 3
+    # Number of samples for a single bit (30 ms)
+    bit_samples = int(signal_utils.bit_duration / 1000 * sampling_freq)
+    search_step_samples = bit_samples / 3
 
     sequence_buffer = ''
 
+    # Start of signal has to be searched if the source sound file isn't perfect
     signal_start_index = -1
 
     if not perfect_generation:
-        # Noise evaluation
+        # Noise evaluation on the first 10 ms of the sound file
         noise_extract = data[0:search_step_samples]
         noise_freq_space = fftfreq(noise_extract.size, sampling_period)
         noise_sig_fft = fft(noise_extract)
@@ -49,6 +63,7 @@ def get_sequence_from_file(file_path, perfect_generation = False):
     else:
         signal_start_index = 0
 
+    # After the start of the signal has been evaluated, filter with band-pass filters
     signal = data[signal_start_index:]
     freq_signal = fftfreq(signal.size, sampling_period)
     sig_fft = fft(signal)
@@ -62,11 +77,13 @@ def get_sequence_from_file(file_path, perfect_generation = False):
     # First frame
     num_windows = 32
     for w in range(num_windows):
-        lower_bound = int(w * step_samples)
-        upper_bound = int((w + 1) * step_samples)
+        lower_bound = int(w * bit_samples)
+        upper_bound = int((w + 1) * bit_samples)
+        # The prominent frequency is the one with the highest variance
         variance_2k = np.var(data_2k[lower_bound:upper_bound])
         variance_2_5k = np.var(data_2_5k[lower_bound:upper_bound])
 
+        # Append corresponding bit
         if variance_2k > variance_2_5k:
             sequence_buffer += '0'
         else:
@@ -78,17 +95,24 @@ def get_sequence_from_file(file_path, perfect_generation = False):
     num_windows = 16
     start_frame = 1.0 * sampling_freq
     for w in range(num_windows):
-        lower_bound = int(start_frame + w * step_samples)
-        upper_bound = int(start_frame + (w + 1) * step_samples)
+        lower_bound = int(start_frame + w * bit_samples)
+        upper_bound = int(start_frame + (w + 1) * bit_samples)
+        # The prominent frequency is the one with the highest variance
         variance_2k = np.var(data_2k[lower_bound:upper_bound])
         variance_2_5k = np.var(data_2_5k[lower_bound:upper_bound])
 
+        # Append corresponding bit
         if variance_2k > variance_2_5k:
             sequence_buffer += '0'
         else:
             sequence_buffer += '1'
 
     return sequence_buffer
+
+
+'''
+Plots the waveform, filtered 0 bits and 1 bits, noise spectrum (when applicable), filtered sync beeps
+'''
 
 
 def plot_from_file(file_path):
@@ -98,22 +122,26 @@ def plot_from_file(file_path):
 
     freq_space = fftfreq(data.size, sampling_period)
 
+    # Signal Spectrum
     sig_fft = fft(data)
 
+    # Band-pass filters for 2.0k, 2.5k and 1.0k frequencies
     low_filter = freq_filter(low_freq, freq_space)
     high_filter = freq_filter(high_freq, freq_space)
     sync_filter = freq_filter(sync_freq, freq_space)
 
+    # Processed signals
     data_2k = np.real(ifft(low_filter * sig_fft))
     data_2_5k = np.real(ifft(high_filter * sig_fft))
     data_1k = np.real(ifft(sync_filter * sig_fft))
 
-    # Noise evaluation
+    # Noise evaluation (relevant only if the initial signal is not ideal)
     noise_extract = data[0:int(10 / 1000 * sampling_freq)]
     noise_freq_space = fftfreq(noise_extract.size, sampling_period)
     pos_noise_freq_space = noise_freq_space[:int(noise_freq_space.size / 2)]
     noise_sig_real_dft = np.real(fft(noise_extract))[:pos_noise_freq_space.size]
 
+    # Plots
     time_domain_x_axis = np.array([i * sampling_period for i in range(data.size)])
     fig, axs = plt.subplots(3, 2, figsize=(20, 18))
     axs[0, 0].plot(time_domain_x_axis, data)

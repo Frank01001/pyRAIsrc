@@ -1,9 +1,11 @@
 import numpy as np
-
 import signal_utils
 from information_block import InformationBlock
 
 
+'''
+Returns the signal frames (separately) as bool numpy arrays
+'''
 def string_to_binary_frames(string: str):
     if len(string) != (32 + 16 + 1):
         raise Exception('Invalid string size')
@@ -69,10 +71,14 @@ ID_F2_VALUE = np.array([True, False])
 AN_VALUES = np.array([80, 40, 20, 10, 8, 4, 2, 1])
 SE_VALUES = np.array([4, 2, 1])
 
-
+'''
+Returns an InformationBlock object containing all SRC information contained in the input binary string
+raises exceptions in case of inconsistencies (ID bits and parity)
+'''
 def decode(binary_string: str):
     frame1, frame2 = string_to_binary_frames(binary_string)
 
+    # Check ID bits for both frames
     id1_check = (frame1[ID_F1] != ID_F1_VALUE)
     id2_check = (frame2[ID_F2] != ID_F2_VALUE)
     check_all = np.sum(id1_check) + np.sum(id2_check)
@@ -119,9 +125,12 @@ def decode(binary_string: str):
     return info_block
 
 
+'''
+Returns the two frames (separately) as bool numpy arrays given the input InformationBlock
+'''
 def encode(info_block : InformationBlock):
-    frame1 = np.zeros(32)
-    frame2 = np.zeros(16)
+    frame1 = np.zeros(32, dtype=bool)
+    frame2 = np.zeros(16, dtype=bool)
 
     # Frame 1
     frame1[1] = True
@@ -138,6 +147,7 @@ def encode(info_block : InformationBlock):
     frame2[0] = True
     year_b = info_block.year
 
+    # SRC year bits only have two digits (ambiguity)
     if year_b > 2000:
         year_b -= 2000
     else:
@@ -146,10 +156,13 @@ def encode(info_block : InformationBlock):
     frame2[AN] = signal_utils.coded_integer(year_b, AN_VALUES)
 
     tz_change = info_block.next_tz_change
+    # internal representation of tz_change >= 7 in the InformationBlock is -1
     if tz_change < 0:
         tz_change = 7
 
     frame2[SE] = signal_utils.coded_integer(tz_change, SE_VALUES)
+
+    # Leap second encoding
     if info_block.leap_second < 0:
         frame2[SI] = np.array([True, True])
     elif info_block.leap_second > 0:
