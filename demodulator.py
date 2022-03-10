@@ -115,7 +115,7 @@ def plot_from_file(file_path):
     noise_sig_real_dft = np.real(fft(noise_extract))[:pos_noise_freq_space.size]
 
     time_domain_x_axis = np.array([i * sampling_period for i in range(data.size)])
-    fig, axs = plt.subplots(3, 2, figsize=(18, 18))
+    fig, axs = plt.subplots(3, 2, figsize=(20, 18))
     axs[0, 0].plot(time_domain_x_axis, data)
     axs[0, 0].set_title('Initial Signal')
     axs[1, 0].plot(time_domain_x_axis, data_2k)
@@ -125,5 +125,6 @@ def plot_from_file(file_path):
     axs[2, 0].plot(time_domain_x_axis, data_1k)
     axs[2, 0].set_title('Filtered sync beeps')
     axs[2, 1].plot(pos_noise_freq_space, noise_sig_real_dft)
-    axs[2, 1].set_title('Noise spectrum')
+    axs[2, 1].set_title('Noise spectrum (ignore if perfect generation)')
+    fig.tight_layout(pad=5.0)
     plt.show()
