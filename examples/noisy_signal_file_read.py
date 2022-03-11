@@ -2,7 +2,7 @@ from pyraisrc.information_block import InformationBlock
 from pyraisrc import demodulator, coder_decoder
 
 examples_folder_path = ''
-filename = 'noisy_signal_1.wav'
+filename = 'noise_2.wav'
 
 full_path = examples_folder_path + '/' + filename
 

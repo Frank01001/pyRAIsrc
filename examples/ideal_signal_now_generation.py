@@ -5,6 +5,7 @@ from pyraisrc import demodulator, modulator, coder_decoder
 examples_folder_path = ''
 
 info_block = InformationBlock.from_datetime(datetime.datetime.now(), time_zone='CET')
+info_block.print_info()
 frame1, frame2 = coder_decoder.encode(info_block)
 
 waveform = modulator.generate_waveform(frame1, frame2, 44100, amplitude=1.0)

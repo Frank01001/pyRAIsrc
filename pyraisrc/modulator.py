@@ -39,7 +39,7 @@ def generate_waveform(frame1, frame2, sampling_rate, amplitude = 1.0):
         t = i * bit_N
         tp = t + bit_N
 
-        pitch = high_30ms if frame1[i] is True else low_30ms
+        pitch = high_30ms if frame1[i] == 1 else low_30ms
         waveform[t:tp] = pitch
 
     # Second frame starts at second 53
@@ -50,7 +50,7 @@ def generate_waveform(frame1, frame2, sampling_rate, amplitude = 1.0):
         t = k + i * bit_N
         tp = t + bit_N
 
-        pitch = high_30ms if frame2[i] is True else low_30ms
+        pitch = high_30ms if frame2[i] == 1 else low_30ms
         waveform[t:tp] = pitch
 
     # Sync beeps (precalculated as before

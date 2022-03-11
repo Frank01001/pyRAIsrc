@@ -113,7 +113,7 @@ def decode(binary_string: str):
     warning_leap_second = +1 * leap_second_bits[0] - 2 * leap_second_bits[1]
     parity = np.sum(frame2[0:15]) % 2 == 0  # Odd parity
 
-    if parity != frame1[PA]:
+    if parity != frame2[PA]:
         raise Exception('Invalid Rai SRC: PA parity bit is incorrect')
 
     info_block = InformationBlock()

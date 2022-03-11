@@ -45,7 +45,7 @@ def coded_integer(value, bit_values):
     buffer = value
 
     for k in range(N):
-        if buffer > bit_values[k]:
+        if buffer >= bit_values[k]:
             buffer -= bit_values[k]
             code[k] = True
 

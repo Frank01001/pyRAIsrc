@@ -22,8 +22,9 @@ def get_sequence_from_file(file_path, perfect_generation=False):
     sampling_period = 1 / sampling_freq
 
     # Number of samples for a single bit (30 ms)
-    bit_samples = int(bit_duration / 1000 * sampling_freq)
-    search_step_samples = int(10 / 1000 * sampling_freq)
+    bit_N = int(bit_duration / 1000 * sampling_freq)
+    bit_samples = np.arange(0, bit_N * sampling_period, sampling_period).astype(np.float32)
+    search_step_samples = int(5 / 1000 * sampling_freq)
 
     sequence_buffer = ''
 
@@ -32,30 +33,28 @@ def get_sequence_from_file(file_path, perfect_generation=False):
 
     if not perfect_generation:
 
-        # Noise evaluation on the first 1 sec of the sound file
-        noise_extract = data[0:search_step_samples]
-        noise_freq_space = fftfreq(noise_extract.size, sampling_period)
-        noise_sig_fft = fft(noise_extract)
+        period = 1.0 / sampling_freq
 
-        index_2k = get_closest_frequency_index(low_freq, noise_freq_space)
-        index_2_5k = get_closest_frequency_index(high_freq, noise_freq_space)
+        # 30 ms long cos waves are precalculated and applied when needed
+        bit_N = int(bit_duration / 1000 * sampling_freq)
+        low_30ms = np.cos(2.0 * np.pi * low_freq * bit_samples)
+        high_30ms = np.cos(2.0 * np.pi * high_freq * bit_samples)
+        target = np.concatenate([low_30ms, high_30ms])
 
-        noise_2k = np.real(noise_sig_fft[index_2k])
-        noise_2_5k = np.real(noise_sig_fft[index_2_5k])
+        window_N = target.size
+        window_count = data.size // window_N
+        first_cov = 0.0
+        minimum_cov = 7e-4
 
-        noise_threshold = 141.2 * max(noise_2k, noise_2_5k)
+        for w in range(window_count):
+            w_beg = w * window_N
+            w_end = w_beg + window_N
+            cov = np.cov(data[w_beg:w_end], target)[0, 1]
+            if w == 0:
+                first_cov = cov
 
-        bit_window_freq_space = fftfreq(bit_samples, sampling_period)
-        index_2k = get_closest_frequency_index(low_freq, bit_window_freq_space)
-        index_2_5k = get_closest_frequency_index(high_freq, bit_window_freq_space)
-
-        # Find start of signal
-        search_steps = np.arange(0, data.size, search_step_samples)[:-1]
-        for t in search_steps:
-            spectrum = fft(data[t:t + search_step_samples])[:int(sampling_freq / 2)]
-
-            if max(spectrum[index_2k], spectrum[index_2_5k]) > noise_threshold:
-                signal_start_index = t
+            if cov > max(50.0 * first_cov, minimum_cov):
+                signal_start_index = w_beg + int(10 / 1000 * sampling_freq)
                 break
 
         print('Signal starts at {} seconds'.format(signal_start_index / sampling_freq))
@@ -70,8 +69,8 @@ def get_sequence_from_file(file_path, perfect_generation=False):
     freq_signal = fftfreq(signal.size, sampling_period)
     sig_fft = fft(signal)
 
-    filter_2k = freq_filter(low_freq, freq_signal, interval=50)
-    filter_2_5k = freq_filter(high_freq, freq_signal, interval=50)
+    filter_2k = freq_filter(low_freq, freq_signal, interval=100)
+    filter_2_5k = freq_filter(high_freq, freq_signal, interval=100)
 
     data_2k = np.real(ifft(filter_2k * sig_fft))
     data_2_5k = np.real(ifft(filter_2_5k * sig_fft))
@@ -79,8 +78,8 @@ def get_sequence_from_file(file_path, perfect_generation=False):
     # First frame
     num_windows = 32
     for w in range(num_windows):
-        lower_bound = int(w * bit_samples)
-        upper_bound = int((w + 1) * bit_samples)
+        lower_bound = int(w * bit_N)
+        upper_bound = int((w + 1) * bit_N)
         # The prominent frequency is the one with the highest variance
         variance_2k = np.var(data_2k[lower_bound:upper_bound])
         variance_2_5k = np.var(data_2_5k[lower_bound:upper_bound])
@@ -97,8 +96,8 @@ def get_sequence_from_file(file_path, perfect_generation=False):
     num_windows = 16
     start_frame = 1.0 * sampling_freq
     for w in range(num_windows):
-        lower_bound = int(start_frame + w * bit_samples)
-        upper_bound = int(start_frame + (w + 1) * bit_samples)
+        lower_bound = int(start_frame + w * bit_N)
+        upper_bound = int(start_frame + (w + 1) * bit_N)
         # The prominent frequency is the one with the highest variance
         variance_2k = np.var(data_2k[lower_bound:upper_bound])
         variance_2_5k = np.var(data_2_5k[lower_bound:upper_bound])
