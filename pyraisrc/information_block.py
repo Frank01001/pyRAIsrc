@@ -50,7 +50,7 @@ class InformationBlock:
     Sets the time zone tag as a string given the value of the OE bit
     '''
     def set_time_zone(self, oe_bit):
-        self.time_zone = 'CEST' if oe_bit is True else 'CET'
+        self.time_zone = 'CEST' if oe_bit else 'CET'
 
     '''
     Stores the information on the next DST change
@@ -118,3 +118,13 @@ class InformationBlock:
         buffer.next_tz_change = next_tz_change
         return buffer
 
+    def __str__(self):
+        return 'InformationBlock: {} {} {} {} {:02d}:{:02d} {}'.format(
+            days_of_week[self.day_of_week],
+            months_str[self.month],
+            self.day,
+            self.year,
+            self.hour,
+            self.minutes,
+            self.time_zone
+        )

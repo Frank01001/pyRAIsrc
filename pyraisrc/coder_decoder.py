@@ -22,7 +22,7 @@ def string_to_binary_frames(string: str):
         elif char == '1':
             frame1[i] = True
         else:
-            raise Exception('Invalid String: Unrecognized character \'{}\''.format(char))
+            raise Exception(f'Invalid String: Unrecognized character \'{char}\'')
 
     # Check for space
     if string[32] != ' ':
